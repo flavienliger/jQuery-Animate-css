@@ -1,0 +1,79 @@
+<html>
+	<head>
+		<script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+	</head>
+<body>
+	<style>
+		@-webkit-keyframes androidBugfix {from { padding: 0; } to { padding: 0; }}
+		body { -webkit-animation: androidBugfix infinite 1s; }
+
+		.anim { 
+			position: absolute;
+			margin: 10px;
+			left: 0px;
+			top: 0px;
+			z-index: 100;
+			width: 100px; 
+			height: 100px; 
+			background: url('cocci.png');
+			padding: 0.5em; 
+			border: 1px solid black; 
+			-webkit-transform-origin: 50% 50%;
+		}
+		#ab{
+			left: 400px;	
+		}
+		.button {
+			position: absolute;
+			bottom: 100px;
+		}
+		
+		@-webkit-keyframes test {from { box-shadow: 2px 2px 2px black; } to { box-shadow: 2px 2px 20px black; }}
+		
+	</style>
+
+	<div id="0" class="anim">
+  		<p>ANIMATE !</p>
+	</div>
+	
+	<p class="button"><button onclick="pause();">Pause</button> / <button onclick="play();">Play</button> / <button onclick="stop();">Stop</button></p>
+	
+	<script>
+	(function () {
+		
+		//EVENTS
+		$.events = {
+			click: 'click',
+			mousedown: 'mousedown',
+			mouseup: 'mouseup',
+			mousemove: 'mousemove'
+		};
+		$.touchEvents = {
+			click: 'click',
+			mousedown: 'touchstart',
+			mouseup: 'touchend',
+			mousemove: 'touchmove'
+		};
+
+		var tablet = navigator.userAgent.match(/(iPhone|iPod|iPad|Android)/i);
+		if(tablet){
+			$.events = $.extend($.events, $.touchEvents);
+		}
+
+		$('body').bind($.events.mousemove, function(e){
+			e.preventDefault();
+			return false;
+		});
+	})();
+	</script>
+	
+	<!-- by transform -->
+	<script src="animate.js"></script>
+	<script src="transform.js"></script>
+	
+	
+	<script>
+		
+	</script>
+</body>
+</html>	

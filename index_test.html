@@ -16,7 +16,7 @@
 			width: 100px; 
 			height: 100px; 
 			background: url('cocci.png');
-			padding: 0.5em; 
+			padding: 10px; 
 			border: 1px solid black; 
 			-webkit-transform-origin: 50% 50%;
 		}
@@ -32,8 +32,10 @@
 		
 	</style>
 
-	<div id="0" class="anim">
-  		<p>ANIMATE !</p>
+	<div style="width: 400px; border: 2px solid grey; height: 400px; position: relative;">
+		<div id="0" class="anim">
+			<p>ANIMATE !</p>
+		</div>
 	</div>
 	
 	<p class="button"><button onclick="pause();">Pause</button> / <button onclick="play();">Play</button> / <button onclick="stop();">Stop</button></p>
@@ -73,7 +75,10 @@
 	
 	
 	<script>
-		
+		$('#0').animate({
+			left: 200,
+			top: 300
+		});
 	</script>
 </body>
 </html>	

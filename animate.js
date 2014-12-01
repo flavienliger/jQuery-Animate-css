@@ -31,9 +31,11 @@
 		
 		this.obj = $o;
 		this.queue = [];
-		this.cssData = {};
+		this.paused = false;
+		this.timeStart;
 		this.data = {};
 		this.obj.data('animate', this);
+		
 		this.opt = {
 			avoidTransforms: false,
 			leaveTransforms: false,
@@ -48,6 +50,8 @@
 		interpretValue: function(opt){
 			
 			var position = this.obj.position();
+			this.data.positionStart = position;
+			
 			var transformOriginal = this.data.transformOriginal;
 			var newProp = {};
 			
@@ -93,12 +97,11 @@
 				this.data.endCss.top = 'initial';
 			}
 			
-			var transform = new Transform(newProp);
 			this.data.transform = {
-				transform: transform.getCssFormat()
+				transform:  new Transform(newProp).getCssFormat()
 			};
 			
-			console.log(this.data.transform.transform);
+			this.data.transformObjet = newProp;
 		},
 		
 		getTransform: function(){
@@ -139,58 +142,130 @@
 				original[tp] = this.obj.css(tp) || '';
 				original[td] = this.obj.css(td) || '';
 				original[tf] = this.obj.css(tf) || '';
-				
-				properties[tp] = 'all';
-				properties[td] = def.duration + 'ms';
-				properties[tf] = def.easing;
 			}
+			
+			properties['transition-property'] = 'all';
+			properties['transition-duration'] = def.duration + 'ms';
+			properties['transition-timing-function'] = def.easing;
+			
+			this.data.option = def;
 		},
 		
 		start: function(aParams){
-		
-			this.obj.bind(transitionEndEvent, this.endTransition);
+			
+			this.obj.addClass('in-transition')
+				.bind(transitionEndEvent, this.endTransition);
 			
 			this.data.transformOriginal = this.getTransform();
 			this.parseOption.apply(this, aParams);
 			
-//			this.clone = this.obj.clone(true, true)
-//				.css(this.data.endCss)
-//				.css({display: 'none'})
-//				.after(this.obj);
+			this.makeClone();
+			this.startAnimation();
+		},
+		
+		makeClone: function(){
 			
-			var css = {};
+			this.clone = this.obj.clone(true, true)
+				.css(this.data.endCss)
+				.css({display: 'none'});
 			
-			this.obj.css(this.data.transition);
+			this.obj.after(this.clone);
+		},
+		
+		startAnimation: function(){
+			
+			this.obj.css(_prefixes(this.data.transition));
 			this.obj.offset();
 			this.obj.css(_prefixes(this.data.transform));
+			this.timeStart = Date.now();
 		},
 		
 		endTransition: function(){
 			
-			// callback
-			$.speed().complete();
 			var self = $(this).data('animate');
 			
+			self.obj.unbind(transitionEndEvent);
 			self.stop.apply(self, []);
+			// callback
+			self.data.option.complete.apply(self.obj.get(0), []);
 		},
 		
 		pause: function(){
 			
+			if(this.paused)
+				return false;
+			
+			this.paused = true;
+			
+			var position = this.obj.position();
+			var display = this.obj.css('display');
+			
+			this.obj.remove();
+			
+			this.clone.css({
+				display: display,
+				left: position.left,
+				top: position.top
+			});
+			
+			this.obj = this.clone;
+			this.makeClone();
+			
+			
+			// update transform
+			
+			var diff = {
+				top: position.top - this.data.positionStart.top,
+				left: position.left - this.data.positionStart.left
+			};
+			
+			this.data.positionStart = position;
+			
+			var transform = this.data.transformObjet;
+			
+			if(	transform.translateX ) 
+				transform.translateX -= diff.left;
+			
+			if( transform.translateY )
+				transform.translateY -= diff.top;
+			
+			this.data.transform = {
+				transform:  new Transform(transform).getCssFormat()
+			};
+			
+			// update time
+			
+			var time = Date.now() - this.timeStart;
+			var def = this.data.option;
+			def.duration-= time;
+			
+			this.data.transition['transition-duration'] = def.duration+'ms';
+			
+			console.log(this.data.transition);
 		},
 		
 		play: function(){
 			
+			if(!this.paused)
+				return false;
+			
+			this.paused = false;
+			
+			this.startAnimation();
 		},
 		
 		stop: function(){
-			var css = {};
 			
-			if(!this.opt.leaveTransforms){
-				css = this.obj.css(this.data.endCss);
+			this.paused = false;
+			
+			if(this.opt.leaveTransforms){
+				this.obj.css( this.data.transitionOriginal );
 			}
-			
-			css = $.extend(css, this.data.transitionOriginal);
-			this.obj.css(css);
+			else{
+				this.obj.remove();
+				this.clone.show();
+				this.obj = this.clone;
+			}
 		},
 		
 		rotate: function(){
@@ -217,15 +292,21 @@
 	};
 	
 	$.fn.pause = function(){
-			
+		
+		var data = $(this).data('animate')
+		data.pause.apply(data, []);
 	};
 		
 	$.fn.play = function(){
-			
+		
+		var data = $(this).data('animate');
+		data.play.apply(data, []);
 	};
 		
 	$.fn.rotate = function(){
-			
+		
+		var data = $(this).data('animate')
+		data.rotate.apply(data, []);
 	};
 		
 	$.fn.getAnimPos = function(){

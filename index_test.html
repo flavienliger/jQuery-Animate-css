@@ -17,7 +17,7 @@
 			height: 100px; 
 			background: url('cocci.png');
 			padding: 10px; 
-			border: 1px solid black; 
+/*			border: 1px solid black; */
 			-webkit-transform-origin: 50% 50%;
 		}
 		#ab{
@@ -34,6 +34,12 @@
 
 	<div style="width: 400px; border: 2px solid grey; height: 400px; position: relative;">
 		<div id="0" class="anim">
+			<p>ANIMATE !</p>
+		</div>
+		<div id="1" class="anim">
+			<p>ANIMATE !</p>
+		</div>
+		<div id="2" class="anim">
 			<p>ANIMATE !</p>
 		</div>
 	</div>
@@ -75,10 +81,19 @@
 	
 	
 	<script>
+		function pause(){ $('.in-transition').pause(); }
+		function play(){ $('.in-transition').play(); }
+		function stop(){ $('.in-transition').stop(); }
+		
+		
+		
 		$('#0').animate({
 			left: 200,
 			top: 300
+		}, 2000, 'linear', function(){
+			console.log(this);
 		});
+		
 	</script>
 </body>
 </html>	

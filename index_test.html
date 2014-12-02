@@ -39,9 +39,11 @@
 		<div id="1" class="anim">
 			<p>ANIMATE !</p>
 		</div>
+<!--
 		<div id="2" class="anim">
 			<p>ANIMATE !</p>
 		</div>
+-->
 	</div>
 	
 	<p class="button"><button onclick="pause();">Pause</button> / <button onclick="play();">Play</button> / <button onclick="stop();">Stop</button></p>
@@ -77,6 +79,7 @@
 	
 	<!-- by transform -->
 	<script src="animate.js"></script>
+<!--	<script src="enhanced.js"></script>-->
 	<script src="transform.js"></script>
 	
 	
@@ -85,14 +88,34 @@
 		function play(){ $('.in-transition').play(); }
 		function stop(){ $('.in-transition').stop(); }
 		
+		var test = $('#0');
 		
+//		$('#1').animate({
+//			left: 200,
+//			top: 300
+//		}, 2000, 'linear', function(){
+//			console.log(this);
+//		});
 		
-		$('#0').animate({
-			left: 200,
-			top: 300
-		}, 2000, 'linear', function(){
-			console.log(this);
-		});
+		var i =0;
+		function boucle(){ 
+			var left = (i==0)? 400:100;
+			var top = (i==0)? 400: 0;
+			
+			$('.anim:first').stop().animate({left: left, top: top}, 
+			   1000, 
+			   'linear',
+				function(){
+					i = (i==0)? 1:0;
+					boucle();
+				}
+			);
+		}
+//		boucle();
+		
+		test.stop().animate({top: '+=100'},2000)
+		
+//		test.stop().animate({top: 100},2000).animate({left: 100},1000).animate({ right: 400, bottom: 0}, 1000).animate({left: 300}, 4000)
 		
 	</script>
 </body>

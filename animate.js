@@ -117,11 +117,16 @@
 		interpretValue: function(opt){
 			
 			var obj = this.original;
-			var position = obj.position();
+			var position = {
+				left: parseFloat(obj.css('left')),
+				top: parseFloat(obj.css('top'))
+			};
 			var update = {};
 			
 			var transformOriginal = new Transform(obj);
-			var transformEnd = new Transform(obj);
+			var transformEnd = new Transform($.extend({}, transformOriginal.get()));
+			update.transform = new Transform($.extend({}, transformOriginal.get()));
+			
 			var newProp = {};
 			
 			// fadeOut
@@ -174,11 +179,13 @@
 					newProp.translateX = opt.left - position.left;
 				}
 				
+				update.transform.set('translateX', newProp.translateX, true);
 				opt.right = 'initial';
 			}
 			else if(opt.right !== undefined){
 				
 				newProp.translateX = - (opt.right - (parent.w - (position.left + info.w)));
+				update.transform.set('translateY', newProp.translateX, true);
 				
 				this.data.endCss.left = 'initial';
 			}
@@ -194,12 +201,15 @@
 				else{
 					newProp.translateY = opt.top - position.top;
 				}
-					
+				
+				update.transform.set('translateY', newProp.translateY, true);
 				opt.bottom = 'initial';
 			}
 			else if(opt.bottom !== undefined){
 				
 				newProp.translateY = - (opt.bottom - (parent.h - (position.top + info.h)));
+				
+				update.transform.set('translateY', newProp.translateY, true);
 				opt.top = 'initial';
 			}
 			
@@ -217,9 +227,9 @@
 				transformEnd.set('rotateZ', newProp.rotateZ);
 			}
 			
-			update.transform = new Transform(newProp).getCssFormat();
+			update.transform = update.transform.getCssFormat();
 			
-			console.log('trans', opt, update);
+			console.log('trans', opt, update, transformEnd.getCssFormat());
 			
 			
 			this.data.endCss = $.extend(opt, _prefixes({transform: transformEnd.getCssFormat()}));

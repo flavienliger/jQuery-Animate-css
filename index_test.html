@@ -33,9 +33,11 @@
 	</style>
 
 	<div style="width: 400px; border: 2px solid grey; height: 400px; position: relative;">
-		<div id="0" class="anim">
+<!--
+		<div id="0" class="anim" style="-webkit-transform: rotate(90deg)">
 			<p>ANIMATE !</p>
 		</div>
+-->
 		<div id="1" class="anim">
 			<p>ANIMATE !</p>
 		</div>
@@ -88,7 +90,7 @@
 		function play(){ $('.in-transition').play(); }
 		function stop(){ $('.in-transition').stop(); }
 		
-		var test = $('#0');
+		var test = $('#1');
 		
 //		$('#1').animate({
 //			left: 200,
@@ -113,7 +115,7 @@
 		}
 //		boucle();
 		
-		test.stop().animate({top: '+=100'},2000)
+//		test.stop().animate({top: '+=100'},2000)
 		
 //		test.stop().animate({top: 100},2000).animate({left: 100},1000).animate({ right: 400, bottom: 0}, 1000).animate({left: 300}, 4000)
 		

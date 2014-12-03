@@ -33,9 +33,24 @@
 		// dom or string
 		else{
 			// element
-			if(typeof obj !== 'string')
-				obj = $(el).get(0).style.WebkitTransform;
-			
+			if(typeof obj !== 'string'){
+				var cssPrefixes = ['', '-webkit-', '-moz-', '-o-'];
+				
+				var el = obj.get(0);
+				var good = false;
+				
+				for(var i=0; i<cssPrefixes.length; i++){
+					if(el.style[cssPrefixes[i]+'transform']){
+						obj = el.style[cssPrefixes[i]+'transform'];
+						good = true;
+						break;
+					}
+				}
+				
+				if(!good)
+					obj = '';
+				
+			}
 			this.transform = this.convert(obj);
 		}
 	};
@@ -223,7 +238,7 @@
 		 * @param {Number} z
 		 */
 		rotate: function(x, y, z){
-
+			
 			if(y === undefined || y !== null){
 				this.set('rotateZ', x);	
 			}

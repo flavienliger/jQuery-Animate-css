@@ -9,7 +9,7 @@
 	}
 	
 	function _cleanValue(val) {
-		if(typeof val == 'string' && val.indexOf('=')==-1)
+		if(typeof val == 'string' && !val.match(/show|hide|=/))
 			return parseFloat(val.replace(_getUnit(val), ''));
 		else
 			return val;
@@ -18,9 +18,16 @@
 	function _prefixes(obj){
 		var ret = {};
 		
+		var preEl = ['transition', 'transform', 'transition-duration', 'transition-property', 'transition-timing-function'];
+		
 		for(var key in obj){
-			for(var i=0; i<cssPrefixes.length; i++){
-				ret[cssPrefixes[i]+key] = obj[key];
+			if(key.indexOf(preEl) != -1){
+				for(var i=0; i<cssPrefixes.length; i++){
+					ret[cssPrefixes[i]+key] = obj[key];
+				}
+			}
+			else{
+				ret[key] = obj[key];	
 			}
 		}
 		
@@ -72,30 +79,18 @@
 	
 	Animate.prototype = {
 		
-		getTransform: 	function(obj){
-			
-			var transform = '';
-			
-			for(var i=0; i<cssPrefixes.length; i++){
-				if(obj.css(cssPrefixes+'transform')){
-					transform = obj.get(0).style.WebkitTransform;
-					break;
-				}
-			}
-			
-			return _prefixes({	transform: transform });			
-		},
-		
 		parseOption: 	function(prop, speed, easing, callback){
 			
 			var option = prop||{};
 			
+			// remove px/deg
 			for(var key in option){
 				option[key] = _cleanValue(option[key]);
 			}
 			
 			this.interpretValue(option);
 			
+			// set default val
 			var def = $.speed(speed, easing, callback);
 			
 			// transition
@@ -123,16 +118,32 @@
 			
 			var obj = this.original;
 			var position = obj.position();
+			var update = {};
 			
-			this.data.positionStart = position;
-			
-			var transformOriginal = this.data.transformOriginal;
+			var transformOriginal = new Transform(obj);
+			var transformEnd = new Transform(obj);
 			var newProp = {};
 			
-			this.data.endCss = $.extend(opt, transformOriginal);
+			// fadeOut
+			if(opt.opacity == 'hide'){
+				opt.opacity = 0;
+				opt.display = 'none';
+			}
+			// fadeIn
+			if(opt.opacity == 'show'){
+				opt.opacity = 1;
+				opt.display = obj.css('display');
+			}
 			
-			// calcul 
+			// basic prop
+			if(opt.opacity !== undefined)
+				update.opacity = opt.opacity;
+			if(opt.width !== undefined)
+				update.width = opt.width;
+			if(opt.height !== undefined)
+				update.height = opt.height;
 			
+			// movement prop (top/left/bottom/right)
 			if(opt.right !== undefined || opt.bottom !== undefined){
 				var parent = {
 					w: obj.parent().width(),
@@ -163,7 +174,7 @@
 					newProp.translateX = opt.left - position.left;
 				}
 				
-				this.data.endCss.right = 'initial';
+				opt.right = 'initial';
 			}
 			else if(opt.right !== undefined){
 				
@@ -178,29 +189,43 @@
 				
 				if(inc){
 					newProp.translateY = inc;
-					this.data.endCss.top = position.top + inc;
+					opt.top = position.top + inc;
 				}
 				else{
 					newProp.translateY = opt.top - position.top;
 				}
 					
-				this.data.endCss.bottom = 'initial';
+				opt.bottom = 'initial';
 			}
 			else if(opt.bottom !== undefined){
 				
 				newProp.translateY = - (opt.bottom - (parent.h - (position.top + info.h)));
-				this.data.endCss.top = 'initial';
+				opt.top = 'initial';
 			}
 			
 			if(opt.rotate !== undefined){
-					
+				
+				var inc = _parseInc(opt.rotate);
+				console.log(inc, transformOriginal.get('rotateZ'))
+				if(inc){
+					newProp.rotateZ = transformOriginal.get('rotateZ') + inc;
+				}
+				else{
+					newProp.rotateZ = opt.rotate - transformOriginal.get('rotateZ');	
+				}
+				
+				transformEnd.set('rotateZ', newProp.rotateZ);
 			}
 			
-			this.data.transform = {
-				transform:  new Transform(newProp).getCssFormat()
-			};
-			console.log(this.data.transform.transform);
+			update.transform = new Transform(newProp).getCssFormat();
+			
+			console.log('trans', opt, update);
+			
+			
+			this.data.endCss = $.extend(opt, _prefixes({transform: transformEnd.getCssFormat()}));
 			this.data.transformObjet = newProp;
+			this.data.updateCss = update;
+			this.data.positionStart = position;
 		},
 		
 		makeClone: 		function(){
@@ -216,7 +241,7 @@
 			
 			this.obj.css(_prefixes(this.data.transition));
 			this.obj.offset();
-			this.obj.css(_prefixes(this.data.transform));
+			this.obj.css(_prefixes(this.data.updateCss));
 			this.timeStart = Date.now();
 		},
 		
@@ -257,6 +282,7 @@
 			if( transform.translateY )
 				transform.translateY -= diff.top;
 			
+			// UPDATE
 			this.data.transform = {
 				transform:  new Transform(transform).getCssFormat()
 			};
@@ -282,7 +308,6 @@
 			
 			this.original.after(this.obj);
 			
-			this.data.transformOriginal = this.getTransform(this.original);
 			this.parseOption.apply(this, aParams);
 			
 			this.original

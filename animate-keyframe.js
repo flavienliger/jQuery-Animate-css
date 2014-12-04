@@ -2,7 +2,8 @@
 	'use strict';
 	
 	var cssPrefixes = ['', '-webkit-', '-moz-', '-o-'];
-	var transitionEndEvent = 'webkitTransitionEnd oTransitionEnd transitionend';
+//	var transitionEndEvent = 'webkitTransitionEnd oTransitionEnd transitionend';
+	var transitionEndEvent = 'webkitAnimationEnd oAnimationEnd animationend';
 	var basicProp = ['marginLeft', 'marginTop', 'opacity', 'height', 'width'];
 	var transformProp = ['rotate', 'scale', 'rotateX', 'rotateY', 'rotateZ', 'scaleX', 'scaleY', 'translateX', 'translateY', 'translateZ'];
 	var directionProp = ['top', 'right', 'bottom', 'left'];
@@ -21,7 +22,7 @@
 	function _prefixes(obj){
 		var ret = {};
 		
-		var preEl = ['transition', 'transform', 'transition-duration', 'transition-property', 'transition-timing-function'];
+		var preEl = ['animation', 'transition', 'transform', 'transition-duration', 'transition-property', 'transition-timing-function'];
 		
 		for(var key in obj){
 			if(preEl.indexOf(key) != -1){
@@ -74,13 +75,12 @@
 	
 	function _setDefaultTransform(obj){
 		
-		return new Transform(obj);
+		return new Transform(obj).get();
 	}
 	
 	var Animate = function($o, aParams){
 		
-		this.obj      = $o;
-		this.original = $o;
+		this.obj      = $o;		// move object
 		this.clone;
 		
 		this.inAnimation = false;
@@ -89,10 +89,10 @@
 		this.data = {
 			start: {},
 			update: {},
-			set: {},
 			end: {},
 			
-			setCss: {},
+			startCss: {},
+			updateCss: {},
 			endCss: {},
 			
 			transitionOrigine: {},
@@ -101,8 +101,9 @@
 		
 		this.paused   = false;
 		this.timeStart;
+		this.keyframe;
 		
-		this.original.data('animate', this);
+		this.obj.data('animate', this);
 		
 		this.opt = {
 			leaveTransforms: false,
@@ -115,6 +116,41 @@
 	};
 	
 	Animate.prototype = {
+		
+		makeKeyframe:	function(){
+			var cssElement = document.createElement('style');
+			cssElement.type = 'text/css';
+			
+			var start = '';
+			var startCss = this.data.startCss;
+			
+			for(var key in startCss){
+				start += key+': '+startCss[key]+'; ';
+			}
+			
+			var end = '';
+			var endCss = this.data.endCss;
+			
+			for(var key in endCss){
+				end += key+': '+endCss[key]+'; ';
+			}
+			
+			
+			var anim = document.createTextNode(
+				'@-webkit-keyframes anim {'+
+					'from { '+
+						start+
+					'}'+
+					'to { '+
+						end+
+					'}'+
+				'}'
+			);
+			console.log(anim);
+			
+			cssElement.appendChild(anim);	
+			document.body.appendChild(cssElement);
+		},
 		
 		parseOption: 	function(prop, speed, easing, callback){
 			
@@ -138,17 +174,15 @@
 			
 			var start = this.data.start;
 			var update = this.data.update;
-			var set = this.data.set;
 			var end = this.data.end;
-			var obj = this.original;
+			var obj = this.obj;
 			
 			var inc;
 			
 			// transform
 			start.transform = _setDefaultTransform(obj);
 			update.transform = new Transform();
-			set.transform = new Transform($.extend({}, start.transform.get()));
-			end.transform = new Transform($.extend({}, start.transform.get()));
+			end.transform = new Transform($.extend({}, start.transform));
 			
 			// fadeOut
 			if(option.opacity == 'hide'){
@@ -181,10 +215,18 @@
 						end[key] = option[key];
 					}
 					
-					if(directionProp.indexOf(key) != -1)
-						set.transform.set(key=='left'||key=='right'? 'translateX': 'translateY', update[key], true);
-					else
-						set[key] = end[key];
+					// à garder ?
+					if(directionProp.indexOf(key) != -1){
+						if(key == 'left'){
+							end.right = 'initial';
+						} else if(key == 'right'){
+							end.left = 'initial';	
+						} else if(key == 'top'){
+							end.bottom = 'initial';
+						} else if(key == 'bottom'){
+							end.top = 'initial';
+						}
+					}
 				}
 				
 				// rotate/ scale
@@ -200,8 +242,6 @@
 						update.transform.set(key, option[key]);
 						end.transform.set(key, option[key], true);
 					}
-					
-					set.transform.set(key, end.transform.get(key));
 				}
 				
 				// display
@@ -211,15 +251,23 @@
 				}
 			}
 			
-			this.data.endCss = this.generateCss(end);
+			this.generateCss();
+			this.makeKeyframe();
 			console.log(this.data);
 		},
 		
-		generateCss:	function(val){
+		generateCss:	function(){
 			
-			var css = $.extend({}, val);
-			css.transform = css.transform.getCssFormat();
-			return _prefixes(css);
+			var endCss = $.extend({}, this.data.end);
+			endCss.transform = endCss.transform.getCssFormat();
+			endCss = _prefixes(endCss);
+			
+			var startCss = $.extend({}, this.data.start);
+			startCss.transform = new Transform(startCss.transform).getCssFormat();
+			startCss = _prefixes(startCss);
+			
+			this.data.endCss = endCss;
+			this.data.startCss = startCss;
 		},
 		
 		makeClone: 		function(){
@@ -233,12 +281,11 @@
 		
 		startAnimation: function(){
 			
-			this.data.setCss = this.generateCss(this.data.set);
-			
-			this.obj.css(_prefixes(this.data.transition));
-			this.obj.offset();
-			this.obj.css(_prefixes(this.data.setCss));
-			this.timeStart = Date.now();
+			this.obj.css('-webkit-animation', 'anim '+this.data.option.duration+'ms linear forwards');
+//			this.obj.css(_prefixes(this.data.transition));
+//			this.obj.offset();
+//			this.obj.css(_prefixes(this.data.updateCss));
+//			this.timeStart = Date.now();
 		},
 		
 		endTransition: 	function(){
@@ -249,7 +296,7 @@
 			self.stop.apply(self, [true]);
 			
 			// callback
-			self.data.option.complete.apply(self.original.get(0), []);
+			self.data.option.complete.apply(self.obj.get(0), []);
 			
 			if(self.queue.length>0){
 				var newAnim = self.queue[0];
@@ -259,53 +306,29 @@
 			}
 		},
 		
-		calcPause: 		function(time){
+		calcPos: 		function(){
 			
-			var posTime = time;
-			var option = this.data.option
-			var start = this.data.start;
-			var update = this.data.update;
-			var end = this.data.end;
-			var set = this.data.set;
-			var css = {};
+			var position = this.obj.position();
 			
-			var val;
+			var diff = {
+				top: position.top - this.data.positionStart.top,
+				left: position.left - this.data.positionStart.left
+			};
 			
-			for(var key in update){
-				
-				if(key !== 'transform'){
-				
-					val = new Range(
-						{min: 0, max: option.duration}, 
-						{min: start[key], max: end[key]})
-					.getOutput(posTime);
-
-					css[key] = val;
-					set[key] -= val;
-				}
-			}
+			this.data.positionStart = position;
 			
-			var startTrans = start.transform.get();
-			var endTrans = end.transform.get();
-			var transform = new Transform();
+			var transform = this.data.transformObjet;
 			
-			for(var key in endTrans){
-				
-				val = new Range(
-					{min: 0, max: option.duration}, 
-						{min: startTrans[key]||0, max: endTrans[key]})
-					.getOutput(posTime);
-				
-				transform.set(key, val);
-				set.transform.set(key, set.transform.get(key)-val);
-			}
+			if(	transform.translateX ) 
+				transform.translateX -= diff.left;
 			
-			css.transform = transform.getCssFormat();
-			css.display = 'block';
+			if( transform.translateY )
+				transform.translateY -= diff.top;
 			
-			console.log(transform, set);
-			
-			this.clone.css(_prefixes(css));
+			// UPDATE
+			this.data.transform = {
+				transform:  new Transform(transform).getCssFormat()
+			};
 		},
 		
 		
@@ -319,21 +342,11 @@
 			}
 			
 			this.inAnimation = true;
-			this.obj = this.original.clone(true, true);
-			
-			this.parseOption.apply(this, aParams);
 			
 			this.obj.addClass('in-transition')
-					.data('animate', this)
 					.bind(transitionEndEvent, this.endTransition);
 			
-			this.original
-				.after(this.obj)
-				.css(this.data.endCss)
-				.css({display: 'none'});
-			
-			this.makeClone();
-			
+			this.parseOption.apply(this, aParams);
 			this.startAnimation();
 		},
 		
@@ -342,19 +355,30 @@
 			if(this.paused || !this.inAnimation)
 				return false;
 			
-			var time = Date.now() - this.timeStart;
-			
 			this.paused = true;
 			
-			this.calcPause(time);
+			this.obj.offset();
+			var position = this.obj.position();
+			var display = this.obj.css('display');
 			
 			this.obj.remove();
+			
+			this.clone.css({
+				display: display,
+				left: position.left,
+				top: position.top
+			});
+			
 			this.obj = this.clone;
 			this.makeClone();
 			
+			this.calcPos();
+			
 			// update time
+			
+			var time = Date.now() - this.timeStart;
 			var def = this.data.option;
-			def.duration -= time;
+			def.duration-= time;
 			
 			this.data.transition['transition-duration'] = def.duration+'ms';
 		},
@@ -381,21 +405,15 @@
 			}
 			
 			if(!end){
-				
+//				var position = this.obj.position();
+//				this.original.css($.extend({display: 'block'}, position));
 			}
 			else{
-				this.original.show();
-				
+				this.obj.css($.extend({ WebkitAnimation: ''}, this.data.endCss));
+				this.obj.offset();
 			}
 			
-			this.obj.remove();
-			this.clone.remove();
-			
-			this.obj = '';
-			this.clone = '';
 			this.inAnimation = false;
-			
-			this.original.offset();
 		},
 		
 		getAnimPos: 	function(){

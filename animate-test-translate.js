@@ -3,9 +3,6 @@
 	
 	var cssPrefixes = ['', '-webkit-', '-moz-', '-o-'];
 	var transitionEndEvent = 'webkitTransitionEnd oTransitionEnd transitionend';
-	var basicProp = ['marginLeft', 'marginTop', 'opacity', 'height', 'width'];
-	var transformProp = ['rotate', 'scale', 'rotateX', 'rotateY', 'rotateZ', 'scaleX', 'scaleY', 'translateX', 'translateY', 'translateZ'];
-	var directionProp = ['top', 'right', 'bottom', 'left'];
 	
 	function _getUnit(val){
 		return val.match(/\D+$/);
@@ -56,51 +53,17 @@
 		return false;
 	}
 	
-	function _setDefaultTransition(obj){
-		var original = {};
-			
-		for (var i = 0; i < cssPrefixes.length; i++) {
-			var tp = cssPrefixes[i] + 'transition-property',
-				td = cssPrefixes[i] + 'transition-duration',
-				tf = cssPrefixes[i] + 'transition-timing-function';
-
-			original[tp] = obj.css(tp) || '';
-			original[td] = obj.css(td) || '';
-			original[tf] = obj.css(tf) || '';
-		}
-		
-		return original;
-	}
-	
-	function _setDefaultTransform(obj){
-		
-		return new Transform(obj);
-	}
 	
 	var Animate = function($o, aParams){
-		
-		this.obj      = $o;
-		this.original = $o;
-		this.clone;
+		this.obj      = $o;		// move object
+		this.original = $o;		// natif object
+		this.clone;				// temp object (pause)
 		
 		this.inAnimation = false;
 		this.queue    = [];
-		
-		this.data = {
-			start: {},
-			update: {},
-			set: {},
-			end: {},
-			
-			setCss: {},
-			endCss: {},
-			
-			transitionOrigine: {},
-			transition: {}
-		};
-		
 		this.paused   = false;
 		this.timeStart;
+		this.data     = {};
 		
 		this.original.data('animate', this);
 		
@@ -118,108 +81,151 @@
 		
 		parseOption: 	function(prop, speed, easing, callback){
 			
-			// set default val
-			var def = this.data.option = $.speed(speed, easing||'linear', callback);
-			
-			// transition
-			this.data.transitionOrigine = _setDefaultTransition(this.obj);
-			this.data.transition = {
-				transitionProperty: 'all',
-				transitionDuration: def.duration + 'ms',
-				transitionTimingFunction: def.easing
-			};
-			
 			var option = prop||{};
+			
+			// remove px/deg
+			for(var key in option){
+				option[key] = _cleanValue(option[key]);
+			}
+			
 			this.interpretValue(option);
 			
+			// set default val
+			var def = $.speed(speed, easing, callback);
+			
+			// transition
+			var original = this.data.transitionOriginal = {};
+			var properties = this.data.transition = {};
+			
+			for (var i = 0; i < cssPrefixes.length; i++) {
+				var tp = cssPrefixes[i] + 'transition-property',
+					td = cssPrefixes[i] + 'transition-duration',
+					tf = cssPrefixes[i] + 'transition-timing-function';
+				
+				original[tp] = this.obj.css(tp) || '';
+				original[td] = this.obj.css(td) || '';
+				original[tf] = this.obj.css(tf) || '';
+			}
+			
+			properties['transition-property'] = 'all';
+			properties['transition-duration'] = def.duration + 'ms';
+			properties['transition-timing-function'] = def.easing;
+			
+			this.data.option = def;
 		},
 		
-		interpretValue: function(option){
+		interpretValue: function(opt){
 			
-			var start = this.data.start;
-			var update = this.data.update;
-			var set = this.data.set;
-			var end = this.data.end;
 			var obj = this.original;
+			var position = obj.position();
+			var update = {};
 			
-			var inc;
-			
-			// transform
-			start.transform = _setDefaultTransform(obj);
-			update.transform = new Transform();
-			set.transform = new Transform($.extend({}, start.transform.get()));
-			end.transform = new Transform($.extend({}, start.transform.get()));
+			var transformOriginal = new Transform(obj);
+			var transformEnd = new Transform(obj);
+			var newProp = {};
 			
 			// fadeOut
-			if(option.opacity == 'hide'){
-				option.opacity = 0;
-				option.display = 'none';
+			if(opt.opacity == 'hide'){
+				opt.opacity = 0;
+				opt.display = 'none';
 			}
 			// fadeIn
-			if(option.opacity == 'show'){
-				option.opacity = 1;
-				option.display = obj.css('display');
+			if(opt.opacity == 'show'){
+				opt.opacity = 1;
+				opt.display = obj.css('display');
 			}
 			
-			for(var key in option){
+			// basic prop
+			if(opt.opacity !== undefined)
+				update.opacity = opt.opacity;
+			if(opt.width !== undefined)
+				update.width = opt.width;
+			if(opt.height !== undefined)
+				update.height = opt.height;
+			
+			// movement prop (top/left/bottom/right)
+			if(opt.right !== undefined || opt.bottom !== undefined){
+				var parent = {
+					w: obj.parent().width(),
+					h: obj.parent().height()
+				};
 				
-				if(!option.display)
-					option[key] = _cleanValue(option[key]);
+				var info = {
+					w: obj.outerWidth(),
+					h: obj.outerHeight(),
+					ml: parseInt(obj.css('marginLeft')),
+					mr: parseInt(obj.css('marginRight')),
+					mt: parseInt(obj.css('marginTop')),
+					mb: parseInt(obj.css('marginBottom'))
+				};
 				
-				// basic/ move
-				if(basicProp.indexOf(key) != -1 || directionProp.indexOf(key) != -1){
-					start[key] = parseFloat(obj.css(key))||0;
-					inc = _parseInc(option[key]);
-					
-					// += / -=
-					if(inc){
-						update[key] = inc;
-						end[key] = start[key] + inc;
-					}
-					else {
-						update[key] = option[key] - start[key];
-						end[key] = option[key];
-					}
-					
-					if(directionProp.indexOf(key) != -1)
-						set.transform.set(key=='left'||key=='right'? 'translateX': 'translateY', update[key], true);
-					else
-						set[key] = end[key];
+				info.w += info.ml + info.mr;
+				info.h += info.mt + info.mb;
+			}
+			
+			if(opt.left !== undefined){
+				var inc = _parseInc(opt.left);
+				
+				if(inc){
+					newProp.translateX = inc;
+					this.data.endCss.left = position.left + inc;
 				}
-				
-				// rotate/ scale
-				else if(transformProp.indexOf(key) != -1){
-					
-					inc = _parseInc(option[key]);
-					
-					if(inc){
-						update.transform.set(key, inc, true);
-						end.transform.set(key, inc, true);
-					}
-					else{
-						update.transform.set(key, option[key]);
-						end.transform.set(key, option[key], true);
-					}
-					
-					set.transform.set(key, end.transform.get(key));
-				}
-				
-				// display
 				else{
-					start[key] = obj.css(key);
-					end[key] = option[key];
+					newProp.translateX = opt.left - position.left;
 				}
+				
+				opt.right = 'initial';
+			}
+			else if(opt.right !== undefined){
+				
+				newProp.translateX = - (opt.right - (parent.w - (position.left + info.w)));
+				
+				this.data.endCss.left = 'initial';
 			}
 			
-			this.data.endCss = this.generateCss(end);
-			console.log(this.data);
-		},
-		
-		generateCss:	function(val){
+			if(opt.top !== undefined){
+				
+				var inc = _parseInc(opt.top);
+				
+				if(inc){
+					newProp.translateY = inc;
+					opt.top = position.top + inc;
+				}
+				else{
+					newProp.translateY = opt.top - position.top;
+				}
+					
+				opt.bottom = 'initial';
+			}
+			else if(opt.bottom !== undefined){
+				
+				newProp.translateY = - (opt.bottom - (parent.h - (position.top + info.h)));
+				opt.top = 'initial';
+			}
 			
-			var css = $.extend({}, val);
-			css.transform = css.transform.getCssFormat();
-			return _prefixes(css);
+			if(opt.rotate !== undefined){
+				
+				var inc = _parseInc(opt.rotate);
+				console.log(inc, transformOriginal.get('rotateZ'))
+				if(inc){
+					newProp.rotateZ = transformOriginal.get('rotateZ') + inc;
+				}
+				else{
+					newProp.rotateZ = opt.rotate - transformOriginal.get('rotateZ');	
+				}
+				
+				transformEnd.set('rotateZ', newProp.rotateZ);
+			}
+			
+			update.transform = new Transform(newProp).getCssFormat();
+			
+			console.log('trans', opt, update);
+			
+			
+			this.data.endCss = $.extend(opt, _prefixes({transform: transformEnd.getCssFormat()}));
+			this.data.transformObjet = newProp;
+			this.data.updateCss = update;
+			this.data.positionStart = position;
 		},
 		
 		makeClone: 		function(){
@@ -233,11 +239,9 @@
 		
 		startAnimation: function(){
 			
-			this.data.setCss = this.generateCss(this.data.set);
-			
 			this.obj.css(_prefixes(this.data.transition));
 			this.obj.offset();
-			this.obj.css(_prefixes(this.data.setCss));
+			this.obj.css(_prefixes(this.data.updateCss));
 			this.timeStart = Date.now();
 		},
 		
@@ -259,53 +263,29 @@
 			}
 		},
 		
-		calcPause: 		function(time){
+		calcPos: 		function(){
 			
-			var posTime = time;
-			var option = this.data.option
-			var start = this.data.start;
-			var update = this.data.update;
-			var end = this.data.end;
-			var set = this.data.set;
-			var css = {};
+			var position = this.obj.position();
 			
-			var val;
+			var diff = {
+				top: position.top - this.data.positionStart.top,
+				left: position.left - this.data.positionStart.left
+			};
 			
-			for(var key in update){
-				
-				if(key !== 'transform'){
-				
-					val = new Range(
-						{min: 0, max: option.duration}, 
-						{min: start[key], max: end[key]})
-					.getOutput(posTime);
-
-					css[key] = val;
-					set[key] -= val;
-				}
-			}
+			this.data.positionStart = position;
 			
-			var startTrans = start.transform.get();
-			var endTrans = end.transform.get();
-			var transform = new Transform();
+			var transform = this.data.transformObjet;
 			
-			for(var key in endTrans){
-				
-				val = new Range(
-					{min: 0, max: option.duration}, 
-						{min: startTrans[key]||0, max: endTrans[key]})
-					.getOutput(posTime);
-				
-				transform.set(key, val);
-				set.transform.set(key, set.transform.get(key)-val);
-			}
+			if(	transform.translateX ) 
+				transform.translateX -= diff.left;
 			
-			css.transform = transform.getCssFormat();
-			css.display = 'block';
+			if( transform.translateY )
+				transform.translateY -= diff.top;
 			
-			console.log(transform, set);
-			
-			this.clone.css(_prefixes(css));
+			// UPDATE
+			this.data.transform = {
+				transform:  new Transform(transform).getCssFormat()
+			};
 		},
 		
 		
@@ -321,19 +301,20 @@
 			this.inAnimation = true;
 			this.obj = this.original.clone(true, true);
 			
+			this.obj
+				.data('animate', this)
+				.addClass('in-transition')
+				.bind(transitionEndEvent, this.endTransition);
+			
+			this.original.after(this.obj);
+			
 			this.parseOption.apply(this, aParams);
 			
-			this.obj.addClass('in-transition')
-					.data('animate', this)
-					.bind(transitionEndEvent, this.endTransition);
-			
 			this.original
-				.after(this.obj)
 				.css(this.data.endCss)
 				.css({display: 'none'});
 			
 			this.makeClone();
-			
 			this.startAnimation();
 		},
 		
@@ -342,19 +323,30 @@
 			if(this.paused || !this.inAnimation)
 				return false;
 			
-			var time = Date.now() - this.timeStart;
-			
 			this.paused = true;
 			
-			this.calcPause(time);
+			this.obj.offset();
+			var position = this.obj.position();
+			var display = this.obj.css('display');
 			
 			this.obj.remove();
+			
+			this.clone.css({
+				display: display,
+				left: position.left,
+				top: position.top
+			});
+			
 			this.obj = this.clone;
 			this.makeClone();
 			
+			this.calcPos();
+			
 			// update time
+			
+			var time = Date.now() - this.timeStart;
 			var def = this.data.option;
-			def.duration -= time;
+			def.duration-= time;
 			
 			this.data.transition['transition-duration'] = def.duration+'ms';
 		},
@@ -381,11 +373,11 @@
 			}
 			
 			if(!end){
-				
+				var position = this.obj.position();
+				this.original.css($.extend({display: 'block'}, position));
 			}
 			else{
 				this.original.show();
-				
 			}
 			
 			this.obj.remove();

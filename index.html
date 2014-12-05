@@ -16,11 +16,9 @@
 			width: 100px; 
 			height: 100px; 
 			background: url('cocci.png');
-			padding: 10px; 
-/*			border: 1px solid black; */
+			padding: 0.5em; 
+			border: 1px solid black; 
 			-webkit-transform-origin: 50% 50%;
-			-webkit-backface-visibility: hidden;
--webkit-perspective: 1000;
 		}
 		#ab{
 			left: 400px;	
@@ -34,20 +32,8 @@
 		
 	</style>
 
-	<div style="width: 400px; border: 2px solid grey; height: 400px; position: relative;">
-<!--
-		<div id="0" class="anim" style="-webkit-transform: rotate(90deg)">
-			<p>ANIMATE !</p>
-		</div>
--->
-		<div id="1" class="anim" style="-webkit-transform: translateX(20px) rotate(90deg) ">
-			<p>ANIMATE !</p>
-		</div>
-<!--
-		<div id="2" class="anim">
-			<p>ANIMATE !</p>
-		</div>
--->
+	<div id="0" class="anim" style="-webkit-transform: translateX(100px);">
+  		<p>ANIMATE !</p>
 	</div>
 	
 	<p class="button"><button onclick="pause();">Pause</button> / <button onclick="play();">Play</button> / <button onclick="stop();">Stop</button></p>
@@ -82,31 +68,47 @@
 	</script>
 	
 	<!-- by transform -->
-	<script src="animate.js"></script>
-<!--	<script src="enhanced.js"></script>-->
+	<script src="enhanced.js"></script>
 	<script src="transform.js"></script>
 	
 	
 	<script>
-		function pause(){ $('.in-transition').pause(); }
-		function play(){ $('.in-transition').play(); }
-		function stop(){ $('.in-transition').stop(); }
+		var pause = function(){
+			$('.in-transition').pause();	
+		};
 		
-		var test = $('#1');
+		var play = function(){
+			$('.in-transition').play();	
+		};
 		
-//		$('#1').animate({
-//			left: 200,
-//			top: 300
-//		}, 2000, 'linear', function(){
-//			console.log(this);
-//		});
+		var stop = function(){
+			$('.in-transition').stop();	
+		};
+		
+		/*var a = $('.anim:first');
+		a.animate({left:'+=1100px'}, 9267.25468, 'linear');
+		a.bind($.events.mousedown, function(){
+			console.log('OK !');
+			$('#log').html($('#log').html()+'ok');
+			//$(this).stop();
+		});*/
+		
+//		$('.anim:first').animate({left: 500}, 
+//		   2000
+//		);
+		
+		/*$('.anim:first').animate({width: 300, height: 300, marginLeft: 100, marginTop: 100}, 5000, 'linear', function(){ console.log('finish!'); })
+		setTimeout(function(){
+			$('.anim:first').pause();
+			console.log($('.anim:first').getAnimPos())
+		}, 2500);*/
 		
 		var i =0;
 		function boucle(){ 
-			var left = (i==0)? 400:100;
+			var left = (i==0)? 800:100;
 			var top = (i==0)? 400: 0;
 			
-			$('.anim:first').stop().animate({left: left, top: top}, 
+			$('.anim:first').animate({left: left, top: top}, 
 			   1000, 
 			   'linear',
 				function(){
@@ -124,38 +126,37 @@
 			var left = (n==0||n+1==rebond)? 20: 40
 				,sens = ((n%2==0)? '-':'+')+'=';
 
-			if(n < rebond){ console.log('stop');
+			if(n < rebond){
 				$('.anim:first').stop().animate({
 					left: sens+left
 				}, 100, 'easeOutBounce', function(){ shake(n+1);});
 			}
 			else{ 
-//				$('.anim:first').animate({left: 500, top: 100, rotate: 90, opacity: 0.5, width: 50}, 
-//				   1000, 
-//				   'linear',
-//					function(){
-//						$(this).fadeOut();
-//					}
-//				);
-				boucle();
+				$('.anim:first').animate({left: 500, top: 100, rotate: 90, opacity: 0.5, width: 50}, 
+				   1000, 
+				   'linear',
+					function(){
+						$(this).fadeOut();
+					}
+				);
 			}	
 		};
+		//	shake();
 		
-		$('body').on('touchstart', 'div.in-transition', function(){
-//			$(this).stop();
-//			console.log('click');	
-			shake();
+		
+		
+		
+		var img = $('.anim:first').css({ position: 'absolute', top: 200});
+		
+		$('body').bind('touchstart', function(){ console.log('down');
+			img.stop().animate({ top: 500, fastRotate: 180 }, 500, function(){console.log('end');});
 		});
 		
-//		shake();
-		
-//		setTimeout(function(){
-//		test.animate({width: '-=50', opacity: 0.5, left: '200px', top: '+=200', rotate: '+=90'}, 4000, 'linear')
-//		}, 1000);
-//		test.stop().animate({top: '+=100'},2000)
-		
-//		test.stop().animate({top: 100},2000).animate({left: 100},1000).animate({ right: 400, bottom: 0}, 1000).animate({left: 300}, 4000)
-		
+		$('body').bind('touchend', function(){
+			img.animate({ top: 200, fastRotate: 0 }, 200)
+				.animate({ top: '-=200' }, 200)
+				.animate({ top: 200 }, 200);
+		});
 	</script>
 </body>
 </html>	

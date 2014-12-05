@@ -56,22 +56,6 @@
 		return false;
 	}
 	
-	function _setDefaultTransition(obj){
-		var original = {};
-			
-		for (var i = 0; i < cssPrefixes.length; i++) {
-			var tp = cssPrefixes[i] + 'transition-property',
-				td = cssPrefixes[i] + 'transition-duration',
-				tf = cssPrefixes[i] + 'transition-timing-function';
-
-			original[tp] = obj.css(tp) || '';
-			original[td] = obj.css(td) || '';
-			original[tf] = obj.css(tf) || '';
-		}
-		
-		return original;
-	}
-	
 	function _setDefaultTransform(obj){
 		
 		return new Transform(obj);
@@ -95,7 +79,6 @@
 			setCss: {},
 			endCss: {},
 			
-			transitionOrigine: {},
 			transition: {}
 		};
 		
@@ -122,7 +105,6 @@
 			var def = this.data.option = $.speed(speed, easing||'linear', callback);
 			
 			// transition
-			this.data.transitionOrigine = _setDefaultTransition(this.obj);
 			this.data.transition = {
 				transitionProperty: 'all',
 				transitionDuration: def.duration + 'ms',
@@ -136,11 +118,11 @@
 		
 		interpretValue: function(option){
 			
-			var start = this.data.start;
-			var update = this.data.update;
-			var set = this.data.set;
-			var end = this.data.end;
-			var obj = this.original;
+			var start = this.data.start,
+				update = this.data.update,
+				set = this.data.set,
+				end = this.data.end,
+				obj = this.original;
 			
 			var inc;
 			
@@ -212,7 +194,6 @@
 			}
 			
 			this.data.endCss = this.generateCss(end);
-			console.log(this.data);
 		},
 		
 		generateCss:	function(val){
@@ -238,7 +219,7 @@
 			this.obj.css(_prefixes(this.data.transition));
 			this.obj.offset();
 			this.obj.css(_prefixes(this.data.setCss));
-			this.timeStart = Date.now();
+			
 		},
 		
 		endTransition: 	function(){
@@ -250,27 +231,36 @@
 			
 			// callback
 			self.data.option.complete.apply(self.original.get(0), []);
-			
-			if(self.queue.length>0){
-				var newAnim = self.queue[0];
-				self.queue.splice(0,1);
-				
-				self.start.apply(self, [newAnim]);
-			}
 		},
 		
-		calcPause: 		function(time){
+		calcPos: 		function(time){
 			
-			var posTime = time;
-			var option = this.data.option
-			var start = this.data.start;
-			var update = this.data.update;
-			var end = this.data.end;
-			var set = this.data.set;
-			var css = {};
+			var posTime = time,
+				option = this.data.option,
+				start = this.data.start,
+				update = this.data.update,
+				end = this.data.end,
+				set = this.data.set,
+				css = {},
+				val;
 			
-			var val;
+			var startTrans = start.transform,
+				endTrans = end.transform,
+				transform = new Transform();
 			
+			// transform 
+			for(var key in endTrans.get()){
+				
+				val = new Range(
+					{min: 0, max: option.duration}, 
+						{min: startTrans.get(key)||0, max: endTrans.get(key)})
+					.getOutput(posTime);
+				
+				transform.set(key, val);
+				set.transform.set(key, endTrans.get(key));
+			}
+			
+			// basic prop
 			for(var key in update){
 				
 				if(key !== 'transform'){
@@ -281,33 +271,29 @@
 					.getOutput(posTime);
 
 					css[key] = val;
-					set[key] -= val;
+					
+					if(directionProp.indexOf(key) !== -1){
+						var translate = key=='left'||key=='right'?'translateX': 'translateY';
+						set.transform.set(translate, end[key]-val+startTrans.get(translate));
+					}
 				}
-			}
-			
-			var startTrans = start.transform.get();
-			var endTrans = end.transform.get();
-			var transform = new Transform();
-			
-			for(var key in endTrans){
-				
-				val = new Range(
-					{min: 0, max: option.duration}, 
-						{min: startTrans[key]||0, max: endTrans[key]})
-					.getOutput(posTime);
-				
-				transform.set(key, val);
-				set.transform.set(key, set.transform.get(key)-val);
 			}
 			
 			css.transform = transform.getCssFormat();
 			css.display = 'block';
 			
-			console.log(transform, set);
-			
-			this.clone.css(_prefixes(css));
+			return _prefixes(css);
 		},
 		
+		nextQueue:		function(){
+			
+			if(this.queue.length>0){
+				var newAnim = this.queue[0];
+				this.queue.splice(0,1);
+				
+				this.start.apply(this, [newAnim]);
+			}	
+		},
 		
 		/* -------------------- */
 		
@@ -317,6 +303,18 @@
 				this.queue.push(aParams);
 				return false;
 			}
+			
+			this.data = {
+				start: {},
+				update: {},
+				set: {},
+				end: {},
+
+				setCss: {},
+				endCss: {},
+
+				transition: {}
+			};
 			
 			this.inAnimation = true;
 			this.obj = this.original.clone(true, true);
@@ -333,8 +331,8 @@
 				.css({display: 'none'});
 			
 			this.makeClone();
-			
 			this.startAnimation();
+			this.timeStart = Date.now();
 		},
 		
 		pause: 			function(){
@@ -342,11 +340,12 @@
 			if(this.paused || !this.inAnimation)
 				return false;
 			
-			var time = Date.now() - this.timeStart;
-			
+			this.timePause = Date.now();
+			var time = this.timePause - this.timeStart;
+						
 			this.paused = true;
 			
-			this.calcPause(time);
+			this.clone.css(this.calcPos(time));
 			
 			this.obj.remove();
 			this.obj = this.clone;
@@ -354,9 +353,8 @@
 			
 			// update time
 			var def = this.data.option;
-			def.duration -= time;
 			
-			this.data.transition['transition-duration'] = def.duration+'ms';
+			this.data.transition['transition-duration'] = (def.duration-time)+'ms';
 		},
 		
 		play: 			function(){
@@ -365,13 +363,13 @@
 				return false;
 			
 			this.paused = false;
-			
 			this.startAnimation();
+			this.timeStart += Date.now() - this.timePause;
 		},
 		
 		stop: 			function(end){
 			
-			if(!this.obj)
+			if(!this.obj || !this.inAnimation)
 				return false;
 			
 			this.paused = false;
@@ -381,7 +379,7 @@
 			}
 			
 			if(!end){
-				
+				this.original.css(this.calcPos(Date.now() - this.timeStart));
 			}
 			else{
 				this.original.show();
@@ -396,6 +394,7 @@
 			this.inAnimation = false;
 			
 			this.original.offset();
+			this.nextQueue();
 		},
 		
 		getAnimPos: 	function(){

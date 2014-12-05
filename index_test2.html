@@ -43,11 +43,9 @@
 		<div id="1" class="anim" style="-webkit-transform: translateX(20px) rotate(90deg) ">
 			<p>ANIMATE !</p>
 		</div>
-<!--
-		<div id="2" class="anim">
+		<div id="2" class="anim" style="-webkit-transform: translateX(20px) translateY(50px) rotate(90deg) ">
 			<p>ANIMATE !</p>
 		</div>
--->
 	</div>
 	
 	<p class="button"><button onclick="pause();">Pause</button> / <button onclick="play();">Play</button> / <button onclick="stop();">Stop</button></p>
@@ -82,15 +80,15 @@
 	</script>
 	
 	<!-- by transform -->
+	<script src="http://cdnjs.cloudflare.com/ajax/libs/gsap/1.15.0/TweenMax.min.js"></script>
 	<script src="animate.js"></script>
-<!--	<script src="enhanced.js"></script>-->
 	<script src="transform.js"></script>
 	
 	
 	<script>
-		function pause(){ $('.in-transition').pause(); }
-		function play(){ $('.in-transition').play(); }
-		function stop(){ $('.in-transition').stop(); }
+//		function pause(){ $('.').pause(); }
+//		function play(){ $('.in-transition').play(); }
+//		function stop(){ $('.in-transition').stop(); }
 		
 		var test = $('#1');
 		
@@ -115,43 +113,26 @@
 				}
 			);
 		}
-		boucle();
+//		boucle();
 		
-		var shake = function(n){
-			var rebond = 4
-				,n = n||0;
-
-			var left = (n==0||n+1==rebond)? 20: 40
-				,sens = ((n%2==0)? '-':'+')+'=';
-
-			if(n < rebond){ console.log('stop');
-				$('.anim:first').stop().animate({
-					left: sens+left
-				}, 100, 'easeOutBounce', function(){ shake(n+1);});
-			}
-			else{ 
-//				$('.anim:first').animate({left: 500, top: 100, rotate: 90, opacity: 0.5, width: 50}, 
-//				   1000, 
-//				   'linear',
-//					function(){
-//						$(this).fadeOut();
-//					}
-//				);
-				boucle();
-			}	
-		};
+		var teen;
 		
-		$('body').on('touchstart', 'div.in-transition', function(){
-//			$(this).stop();
-//			console.log('click');	
-			shake();
-		});
+		setTimeout(function(){
+			$('#2').animate({ opacity: 0.5, left: 400}, 2000);
+			
+			//({width: '-=50', opacity: 0.5, left: '200px', top: '+=200', rotate: '+=90'}, 4000, 'linear')
+			teen = TweenMax.to(test.get(0), 2, {
+				opacity: 0.5,
+				left: 400,
+				ease: 'linear'
+			});
+			
+		}, 1000);
 		
-//		shake();
+		function pause(){ teen.pause(); $('#2').pause(); }
+		function play(){ teen.play(); $('#2').play(); }
+		function stop(){ $('.in-transition').stop(); }
 		
-//		setTimeout(function(){
-//		test.animate({width: '-=50', opacity: 0.5, left: '200px', top: '+=200', rotate: '+=90'}, 4000, 'linear')
-//		}, 1000);
 //		test.stop().animate({top: '+=100'},2000)
 		
 //		test.stop().animate({top: 100},2000).animate({left: 100},1000).animate({ right: 400, bottom: 0}, 1000).animate({left: 300}, 4000)

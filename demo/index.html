@@ -1,0 +1,124 @@
+<html>
+    <head>
+        <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+    </head>
+<body>
+    <style>
+        @-webkit-keyframes androidBugfix {from { padding: 0; } to { padding: 0; }}
+        body { -webkit-animation: androidBugfix infinite 1s; }
+
+        .anim { 
+            position: absolute;
+            margin: 10px;
+            left: 0px;
+            top: 0px;
+            z-index: 100;
+            -webkit-transform-origin: 50% 50%;
+            -webkit-backface-visibility: hidden;
+            -webkit-perspective: 1000;
+        }
+        #ab{
+            left: 400px;    
+        }
+        .button {
+            position: absolute;
+            bottom: -60px;
+            left: 50px;
+        }
+        #body {
+             width: 600px;
+            border: 2px solid grey;
+            height: 550px;
+            position: relative;   
+        }
+    </style>
+
+    <div id="body">
+        <div id="1" class="anim" style="-webkit-transform: translateX(20px) rotate(40deg) ">
+            <img src="icon.png"/>
+        </div>
+        
+        <p class="button">
+            <button onclick="pause();">Pause</button> / 
+            <button onclick="play();">Play</button> / 
+            <button onclick="stop();">Stop</button>
+        </p>
+    </div>
+    
+    
+    <script>
+    (function () {
+        
+        //EVENTS
+        $.events = {
+            click: 'click',
+            mousedown: 'mousedown',
+            mouseup: 'mouseup',
+            mousemove: 'mousemove'
+        };
+        $.touchEvents = {
+            click: 'click',
+            mousedown: 'touchstart',
+            mouseup: 'touchend',
+            mousemove: 'touchmove'
+        };
+
+        var tablet = navigator.userAgent.match(/(iPhone|iPod|iPad|Android)/i);
+        if(tablet){
+            $.events = $.extend($.events, $.touchEvents);
+        }
+
+        $('body').bind($.events.mousemove, function(e){
+            e.preventDefault();
+            return false;
+        });
+    })();
+    </script>
+    
+    <script src="../animate.js"></script>
+    <script src="../transform.min.js"></script>
+    
+    <script>
+        function pause(){ $('.in-transition').pause(); }
+        function play(){ $('.in-transition').play(); }
+        function stop(){ $('.in-transition').stop(); }
+        
+        var i =0;
+        function boucle(){ 
+            var left = (i==0)? 400:100;
+            var top = (i==0)? 400: 0;
+            
+            $('.anim:first').stop().animate({left: left, top: top}, 
+               2000, 
+               'linear',
+                function(){
+                    i = (i==0)? 1:0;
+                    boucle();
+                }
+            );
+        }
+        boucle();
+        
+        var shake = function(n){
+            var rebond = 4
+                ,n = n||0;
+
+            var left = (n==0||n+1==rebond)? 20: 40
+                ,sens = ((n%2==0)? '-':'+')+'=';
+
+            if(n < rebond){ console.log('stop');
+                $('.anim:first').stop().animate({
+                    left: sens+left
+                }, 100, 'easeOutBounce', function(){ shake(n+1);});
+            }
+            else{ 
+                boucle();
+            }    
+        };
+        
+        $('.anim:first').click(function(){
+            shake();
+        });
+    </script>
+</body>
+</html>    

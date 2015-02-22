@@ -12,7 +12,7 @@ Work in progress build.
     left: '-=10'
 ```
 
-```
+```js
     $('.anim').animate({
         left: 500, 
         top: 100, 
@@ -23,19 +23,19 @@ Work in progress build.
 ```
 
 - time management :
-```
+```js
 $('.anim').pause();     // pause
 $('.anim').play();      // play
 $('.anim').stop();      // stop and set top/left
 ```
 
 - simply chain :
-```
+```js
 $('.anim').animate({ left: 10 }).animate({ top: 50 });
 ```
 
 - extend function
-```
+```js
 $('.anim').rotate(90);
 ```
 
